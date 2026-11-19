@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TabKeeper</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <main>
+    <h1>TabKeeper</h1>
+    <p>現在のChromeウィンドウのタブを保存・復元します。</p>
+    <section>
+      <h2>保存</h2>
+      <button id="save" type="button">現在のタブをJSONに保存</button>
+    </section>
+    <section>
+      <h2>復元</h2>
+      <input id="file" type="file" accept=".json,application/json" aria-label="TabKeeperのJSONファイルを選択">
+      <p id="preview" hidden></p>
+      <button id="restore" type="button" disabled>新しいウィンドウに復元</button>
+      <p class="note">既存のタブは削除しません。</p>
+    </section>
+    <p id="status" role="status" aria-live="polite"></p>
+  </main>
+  <script src="session.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

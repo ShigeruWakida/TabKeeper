@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "TabKeeper",
+  "version": "1.0.0",
+  "description": "Save and restore the current window's tab order, pinned tabs and active tab using a JSON file.",
+  "permissions": [
+    "tabs"
+  ],
+  "action": {
+    "default_title": "TabKeeper",
+    "default_popup": "popup.html"
+  }
+}

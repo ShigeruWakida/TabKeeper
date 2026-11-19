@@ -1,0 +1,29 @@
+name: Publish TabKeeper v1.0.0
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/publish-v1.0.0.yml
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish stable v1.0.0 GitHub Release and tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if gh release view v1.0.0 >/dev/null 2>&1; then
+            echo "v1.0.0 release already exists."
+            exit 0
+          fi
+          gh release create v1.0.0 \
+            --target "${{ github.sha }}" \
+            --title "TabKeeper v1.0.0" \
+            --notes "初期安定版。Chrome実機で動作確認済み。現在のウィンドウにあるタブのURL・並び順・ピン留め状態・選択タブをJSONに保存し、新しいウィンドウへ復元します。既存のタブは変更しません。\n\nChromeへの導入方法はREADMEをご覧ください。" \
+            --latest

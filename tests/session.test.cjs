@@ -1,6 +1,29 @@
 const test=require('node:test');
 const assert=require('node:assert/strict');
 const {createSnapshot,parseSnapshot,makeFilename,addSequence}=require('../session.js');
+const {selectSourceTabs}=require('../session.js');
+test('operation pages are excluded and the launching tab stays active',()=>{
+  const url='chrome-extension://test/popup.html';
+  const tabs=[
+    {id:1,index:0,url:'https://a.example',pinned:true,active:false},
+    {id:2,index:1,url:'https://b.example',pinned:false,active:false},
+    {id:3,index:2,url:url+'?sourceTabId=2',active:true},
+    {id:4,index:3,url:url+'?sourceTabId=1',active:false}
+  ];
+  const result=selectSourceTabs(tabs,url,2);
+  assert.deepEqual(result.map(t=>[t.id,t.active]),[[1,false],[2,true]]);
+  assert.equal(tabs[1].active,false);
+  assert.equal(selectSourceTabs(tabs,url,999)[0].active,true);
+  tabs[2].active=false;tabs[0].active=true;
+  assert.equal(selectSourceTabs(tabs,url,2)[0].active,true);
+});
+test('v1.0.0 JSON schema remains compatible',()=>{
+  const legacy={format:'tabkeeper-session',version:1,createdAt:'2026-01-01T00:00:00.000Z',tabs:[
+    {url:'https://a.example',pinned:true,active:false},
+    {url:'https://b.example',pinned:false,active:true}
+  ]};
+  assert.deepEqual(parseSnapshot(JSON.parse(JSON.stringify(legacy))).ordered,legacy.tabs);
+});
 test('preserves tab order, pinning and active tab',()=>{
   const data=createSnapshot([
     {index:2,url:'https://c.example',pinned:false,active:false},

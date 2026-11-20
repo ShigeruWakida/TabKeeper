@@ -6,12 +6,20 @@ on:
     paths:
       - 'session.js'
       - 'popup.js'
+      - 'folder.js'
+      - 'background.js'
+      - 'manifest.json'
+      - 'popup.html'
       - 'tests/**'
       - '.github/workflows/test.yml'
   pull_request:
     paths:
       - 'session.js'
       - 'popup.js'
+      - 'folder.js'
+      - 'background.js'
+      - 'manifest.json'
+      - 'popup.html'
       - 'tests/**'
 
 permissions:
@@ -29,5 +37,7 @@ jobs:
         run: |
           node --check session.js
           node --check popup.js
+          node --check folder.js
+          node --check background.js
       - name: Test session utilities
-        run: node --test tests/session.test.cjs
+        run: node --test tests/*.test.cjs

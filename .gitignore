@@ -1,6 +1,1 @@
-*.zip
-node_modules/
-.DS_Store
-Thumbs.db
-TabKeeper-*.json
-*.session.json
+/dist/

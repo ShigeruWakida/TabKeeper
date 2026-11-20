@@ -27,6 +27,16 @@
     const ordered=[...supported.filter(t=>t.pinned),...supported.filter(t=>!t.pinned)];
     return {tabs,ordered,skipped:tabs.length-supported.length};
   }
+  function selectSourceTabs(tabs, pageUrl, sourceTabId) {
+    const isPage = tab => tab.url?.split('?')[0] === pageUrl;
+    const pageActive = tabs.some(tab => isPage(tab) && tab.active);
+    const selected = tabs.filter(tab => !isPage(tab)).map(tab => ({...tab}));
+    if (pageActive && selected.length) {
+      const active = selected.find(tab => tab.id === sourceTabId) || selected[0];
+      for (const tab of selected) tab.active = tab === active;
+    }
+    return selected;
+  }
   function makeFilename(date) {
     if (!(date instanceof Date) || !Number.isFinite(date.getTime())) throw new Error('日時が不正です。');
     const p=n=>String(n).padStart(2,'0');
@@ -37,7 +47,7 @@
     if (!Number.isInteger(sequence) || sequence<0 || sequence>99999) throw new Error('連番が不正です。');
     return sequence===0 ? filename : filename.replace(/\.json$/, '-' + String(sequence).padStart(3,'0') + '.json');
   }
-  const api={createSnapshot,parseSnapshot,makeFilename,addSequence};
+  const api={createSnapshot,parseSnapshot,makeFilename,addSequence,selectSourceTabs};
   if(typeof module!=='undefined'&&module.exports) module.exports=api;
   else root.TabKeeperSession=api;
 })(globalThis);

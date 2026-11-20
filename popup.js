@@ -14,6 +14,7 @@ function report(text,error=false) { status.textContent=text;status.className=err
 function setBusy(value) {
   busy=value;chooseButton.disabled=value;
   saveButton.disabled=value||!directoryHandle;
+  fileInput.disabled=value;
   restoreButton.disabled=value||!parsed||parsed.ordered.length===0;
 }
 function refreshFolder() {
@@ -50,24 +51,6 @@ async function persistFolder(handle) {
     });
   } finally {db.close();}
 }
-async function requireWritePermission(handle) {
-  const opts={mode:'readwrite'};
-  if(await handle.queryPermission(opts)==='granted') return;
-  if(await handle.requestPermission(opts)!=='granted') throw new Error('フォルダーへの書き込みが許可されませんでした。');
-}
-async function writeUniqueFile(handle,filename,contents) {
-  for(let sequence=0;sequence<=9999;sequence++){
-    const name=TabKeeperSession.addSequence(filename,sequence);
-    try {await handle.getFileHandle(name);continue;}
-    catch(error){if(error.name!=='NotFoundError') throw error;}
-    const file=await handle.getFileHandle(name,{create:true});
-    const writer=await file.createWritable();
-    try {await writer.write(contents);await writer.close();}
-    catch(error){await writer.abort().catch(()=>{});throw error;}
-    return name;
-  }
-  throw new Error('保存ファイル名の連番が上限に達しました。');
-}
 async function init() {
   try {
     if(typeof window.showDirectoryPicker!=='function') {
@@ -76,11 +59,15 @@ async function init() {
     }
     directoryHandle=await readFolder();
     refreshFolder();
+    if(directoryHandle && await directoryHandle.queryPermission({mode:'readwrite'})!=='granted') {
+      report('保存先は記憶されています。保存ボタンを押して書き込みを再許可してください。');
+    }
   } catch(error){report('保存先の読込失敗: '+error.message,true);refreshFolder();}
 }
 chooseButton.addEventListener('click',async()=>{
   // Must be called directly from a user gesture.
-  if(typeof window.showDirectoryPicker!=='function') return;
+  if(busy||typeof window.showDirectoryPicker!=='function') return;
+  setBusy(true);
   try {
     const selected=await window.showDirectoryPicker({mode:'readwrite',id:'tabkeeper-backup'});
     await persistFolder(selected);
@@ -89,22 +76,29 @@ chooseButton.addEventListener('click',async()=>{
     report('保存先フォルダーを記憶しました。');
   } catch(error) {
     if(error.name!=='AbortError') report('フォルダー選択失敗: '+error.message,true);
-  }
+  } finally {setBusy(false);}
 });
 saveButton.addEventListener('click',async()=>{
-  if(!directoryHandle) return;
+  if(busy||!directoryHandle) return;
   setBusy(true);
   try {
     // Try the permission request directly in response to the click.
-    await requireWritePermission(directoryHandle);
+    await TabKeeperFolder.requireWritePermission(directoryHandle);
     const win=await chrome.windows.getCurrent();
-    const tabs=await chrome.tabs.query({windowId:win.id});
+    const allTabs=await chrome.tabs.query({windowId:win.id});
+    const tabs=TabKeeperSession.selectSourceTabs(
+      allTabs, chrome.runtime.getURL('popup.html'),
+      Number(new URLSearchParams(location.search).get('sourceTabId'))
+    );
     const snapshot=TabKeeperSession.createSnapshot(tabs);
-    const filename=await writeUniqueFile(
-      directoryHandle,TabKeeperSession.makeFilename(new Date()),JSON.stringify(snapshot,null,2)
+    // Serialize the existence check and write across all TabKeeper pages.
+    const filename=await navigator.locks.request('tabkeeper-save', ()=>
+      TabKeeperFolder.writeUniqueFile(
+        directoryHandle,TabKeeperSession.makeFilename(new Date()),JSON.stringify(snapshot,null,2)
+      )
     );
     report(snapshot.tabs.length+'タブを保存しました: '+filename);
-  } catch(error) {report('保存失敗: '+error.message,true);}
+  } catch(error) {report('保存失敗: '+error.message+'\n保存先が削除・移動された場合やアクセスできない場合は、保存先フォルダーを選択・変更してください。',true);}
   finally {setBusy(false);}
 });
 fileInput.addEventListener('change',async()=>{
@@ -120,7 +114,7 @@ fileInput.addEventListener('change',async()=>{
   } catch(error){report('読み込み失敗: '+error.message,true);}
 });
 restoreButton.addEventListener('click',async()=>{
-  if(!parsed?.ordered.length)return;
+  if(busy||!parsed?.ordered.length)return;
   setBusy(true);
   try{
     const tabs=parsed.ordered;
